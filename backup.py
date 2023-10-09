@@ -5,7 +5,7 @@ import os.path
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-from apiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload
 
 class MyDrive():
     def __init__(self):
