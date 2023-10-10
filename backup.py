@@ -15,9 +15,8 @@ class MyDrive:
         creds = None
         script_dir = os.path.dirname(os.path.abspath(__file__))
         credentials_path = os.path.join(script_dir, "credentials.json")
-        # The file token.pickle stores the user's access and refresh tokens, and is
-        # created automatically when the authorization flow completes for the first
-        # time.
+
+        # The file token.pickle stores the user's access and refresh tokens
         if os.path.exists("token.pickle"):
             with open("token.pickle", "rb") as token:
                 creds = pickle.load(token)
@@ -63,28 +62,20 @@ class MyDrive:
     def upload_files(self, filename, path):
         backup_folder_id = self.find_backup_folder()
 
-        if not path.endswith(os.path.sep):
-            path += os.path.sep
-
-        # For some reason the path to file may not be correct so, exit gracefully
-        try:
-            file_to_upload = MediaFileUpload(f"{path}{filename}")
-        except FileNotFoundError:
-            print(f"Error: File '{filename}' not found at path '{path}'")
-            return  # Exit gracefully
+        file_to_upload = MediaFileUpload(f"{path}{filename}")
 
         find_file = (
             self.service.files()
             .list(
                 q=f"name='{filename}' and parents='{backup_folder_id}'",
                 spaces="drive",
-                fields="nextPageToken, files(id, name)",
+                fields="files(id)",
                 pageToken=None,
             )
             .execute()
         )
 
-        if len(find_file["files"]) == 0:
+        if not find_file.get("files"):
             file_metadata = {"name": filename, "parents": [backup_folder_id]}
 
             self.service.files().create(
@@ -102,11 +93,17 @@ def main():
 
     path = sys.argv[1]
     expanded_path = os.path.expanduser(path)
-    files = os.listdir(expanded_path)
-    my_drive = MyDrive()
 
-    for file in files:
-        my_drive.upload_files(file, expanded_path)
+    if not expanded_path.endswith(os.path.sep):
+        expanded_path += os.path.sep
+
+    # Check if the specified directory exists
+    if not os.path.exists(expanded_path):
+        print(f"Error: Directory '{expanded_path}' does not exist.")
+        return
+
+    my_drive = MyDrive()
+    my_drive.upload_files(expanded_path)
 
     print("Backup is complete!")
 
