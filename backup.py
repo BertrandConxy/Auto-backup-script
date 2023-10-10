@@ -128,7 +128,7 @@ class MyDrive:
                 parent_folder_id = parent_folder.get("id")
                 return parent_folder_id
             except Exception as e:
-                print(f"Error creating the mani backup folder: {e}")
+                print(f"Error creating the main backup folder: {e}")
                 return None
         else:
             # If the folder exists, return its ID
@@ -145,19 +145,15 @@ class MyDrive:
                 folder_name = os.path.basename(directory)
 
                 # Check if the folder exists in Google Drive
+                query = f"name='{folder_name}' and parents='{backup_folder_id}'"
                 find_folder = (
                     self.service.files()
-                    .list(
-                        q=f"name='{folder_name}' and parents='{backup_folder_id}'",
-                        spaces="drive",
-                        fields="files(id)",
-                        pageToken=None,
-                    )
+                    .list(q=query, spaces="drive", fields="files(id)")
                     .execute()
                 )
 
-                if not find_folder["files"]:
-                    # Create the folder on Google Drive
+                if not find_folder.get("files"):
+                    # If doesn't exist, create it
                     folder_id = self.create_folder(folder_name, backup_folder_id)
 
                     # Now, upload any files inside the folder
@@ -189,14 +185,20 @@ def main():
 
     my_drive = MyDrive()
     print("...Backup cron is started....\n")
-    backups_made = my_drive.upload_folders(expanded_path)
 
-    if backups_made == 0:
-        print("No new backups made today\n")
-    else:
-        print(f"\nTotal new backups made today: {backups_made}\n")
+    try:
+        backups_made = my_drive.upload_folders(expanded_path)
 
-    print("___Backup is completed!___")
+        if backups_made == 0:
+            print("No new backups made today\n")
+        else:
+            print(f"\nTotal new backups made today: {backups_made}\n")
+
+        print("___Backup is completed!___")
+
+    except Exception as e:
+        print(f"Error: {e}")
+        print("___Backup terminated due to an error___")
 
 
 if __name__ == "__main__":
