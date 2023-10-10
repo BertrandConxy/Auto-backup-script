@@ -59,31 +59,83 @@ class MyDrive:
             parent_folder_id = get_folders["files"][0]["id"]
             return parent_folder_id
 
-    def upload_files(self, filename, path):
+    def upload_folders(self, path):
         backup_folder_id = self.find_backup_folder()
+        new_backup_counter = 0
 
-        file_to_upload = MediaFileUpload(f"{path}{filename}")
+        for root, dirs, files in os.walk(path):
+            for directory in dirs:
+                folder_path = os.path.join(root, directory)
+                folder_name = os.path.basename(directory)
 
-        find_file = (
-            self.service.files()
-            .list(
-                q=f"name='{filename}' and parents='{backup_folder_id}'",
-                spaces="drive",
-                fields="files(id)",
-                pageToken=None,
-            )
-            .execute()
-        )
+                # Check if the folder exists in Google Drive
+                find_folder = (
+                    self.service.files()
+                    .list(
+                        q=f"name='{folder_name}' and parents='{backup_folder_id}'",
+                        spaces="drive",
+                        fields="files(id)",
+                        pageToken=None,
+                    )
+                    .execute()
+                )
 
-        if not find_file.get("files"):
-            file_metadata = {"name": filename, "parents": [backup_folder_id]}
+                if not find_folder["files"]:
+                    # Create the folder on Google Drive
+                    folder_metadata = {
+                        "name": folder_name,
+                        "mimeType": "application/vnd.google-apps.folder",
+                        "parents": [backup_folder_id],
+                    }
 
-            self.service.files().create(
-                body=file_metadata, media_body=file_to_upload, fields="id"
-            ).execute()
-            print(f"{filename} was backed up successfully!")
-        else:
-            print(f"{filename} is already backed up.")
+                    folder = (
+                        self.service.files()
+                        .create(body=folder_metadata, fields="id")
+                        .execute()
+                    )
+                    folder_id = folder.get("id")
+                    print(f"Folder: {folder_name} is created on GDrive.")
+
+                    # Now, upload any files inside the folder
+                    folder_files = os.listdir(folder_path)
+
+                    for file in folder_files:
+                        file_path = os.path.join(folder_path, file)
+                        file_name = os.path.basename(file)
+
+                        # Check if the file exists in Google Drive
+                        find_file = (
+                            self.service.files()
+                            .list(
+                                q=f"name='{file_name}' and parents='{folder_id}'",
+                                spaces="drive",
+                                fields="files(id)",
+                                pageToken=None,
+                            )
+                            .execute()
+                        )
+
+                        if not find_file.get("files"):
+                            # Upload the file to the folder
+                            file_metadata = {
+                                "name": file_name,
+                                "parents": [folder_id],
+                            }
+                            file_to_upload = MediaFileUpload(file_path)
+
+                            self.service.files().create(
+                                body=file_metadata,
+                                media_body=file_to_upload,
+                                fields="id",
+                            ).execute()
+
+                            print(
+                                f"------ File: {file_name} was backed up successfully!"
+                            )
+                            new_backup_counter += 1
+                # else:
+                #     print(f"Folder {folder_name} and Its file already backed up")
+        return new_backup_counter
 
 
 def main():
@@ -103,10 +155,41 @@ def main():
         return
 
     my_drive = MyDrive()
-    my_drive.upload_files(expanded_path)
-
-    print("Backup is complete!")
+    print("...Backup cron is started....\n")
+    backups_made = my_drive.upload_folders(expanded_path)
+    if backups_made == 0:
+        print("No new backups made today\n")
+    else:
+        print(f"\nTotal new backups made today: {backups_made}\n")
+    print("___Backup is completed!___")
 
 
 if __name__ == "__main__":
     main()
+
+
+# def upload_files(self, filename, path):
+#         backup_folder_id = self.find_backup_folder()
+
+#         file_to_upload = MediaFileUpload(f"{path}{filename}")
+
+#         find_file = (
+#             self.service.files()
+#             .list(
+#                 q=f"name='{filename}' and parents='{backup_folder_id}'",
+#                 spaces="drive",
+#                 fields="files(id)",
+#                 pageToken=None,
+#             )
+#             .execute()
+#         )
+
+#         if not find_file.get("files"):
+#             file_metadata = {"name": filename, "parents": [backup_folder_id]}
+
+#             self.service.files().create(
+#                 body=file_metadata, media_body=file_to_upload, fields="id"
+#             ).execute()
+#             print(f"{filename} was backed up successfully!")
+#         else:
+#             print(f"{filename} is already backed up.")
