@@ -132,15 +132,14 @@ class MyDrive:
                 )
 
                 if not find_folder.get("files"):
-                    # If doesn't exist, create it
-                    folder_id = self.create_folder(folder_name, backup_folder_id)
-
-                    # Now, upload any files inside the folder
+                    # If the folder is empty, skip creating it and print a message
                     folder_files = os.listdir(folder_path)
-
                     if not folder_files:
-                        print(f"Folder {folder_name} is empty")
+                        print(f"Folder {folder_name} is empty. Skipping...")
                     else:
+                        # If there are files inside the folder, create it
+                        folder_id = self.create_folder(folder_name, backup_folder_id)
+                        # Now, upload any files inside the folder
                         for file in folder_files:
                             file_path = os.path.join(folder_path, file)
                             file_name = os.path.basename(file)
