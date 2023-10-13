@@ -84,18 +84,23 @@ class MyDrive:
     def find_or_create_backup_folder(self):
         # Define the folder name you're looking for
         folder_name = "BackupFolder2023"
+        parent = "1m-vE3pqUdF8QDAkAl3jeDMO4o7acACAH"
 
         # Query Google Drive to find the folder
+        # query = (
+        #     f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder'"
+        # )
         query = (
-            f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder'"
+            f"'{parent}' in parents and name='{folder_name}' and mimeType='application/vnd.google-apps.folder'"
         )
         get_folders = self.service.files().list(q=query, spaces="drive").execute()
 
         if not get_folders.get("files"):
-            # If the folder doesn't exist, create it
+            # If the folder doesn't exist, create it within the specified parent folder
             folder_metadata = {
                 "name": folder_name,
                 "mimeType": "application/vnd.google-apps.folder",
+                "parents": [parent],
             }
 
             try:
