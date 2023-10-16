@@ -191,7 +191,7 @@ def main():
 
     except Exception as e:
         logging.error(f"Error: {e}")
-        logging.info("___Backup terminated due to an error___")
+        logging.info("___Backup terminated due to an error___\n\n")
 
 
 if __name__ == "__main__":
