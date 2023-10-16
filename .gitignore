@@ -2,4 +2,4 @@ credentials.json
 .vscode
 token.pickle
 myenv
-events.log
+backup.log

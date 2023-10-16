@@ -1,4 +1,5 @@
 import pickle
+import logging
 import sys
 import os
 import os.path
@@ -47,10 +48,10 @@ class MyDrive:
                 self.service.files().create(body=folder_metadata, fields="id").execute()
             )
             folder_id = folder.get("id")
-            print(f"Folder: {folder_name} is created on GDrive.")
+            logging.info(f"Folder: {folder_name} is created on GDrive.")
             return folder_id
         except Exception as e:
-            print(f"Error creating the folder '{folder_name}': {e}")
+            logging.error(f"Error creating the folder '{folder_name}': {e}")
 
     def upload_file(self, file_path, file_name, parent_id):
         try:
@@ -77,9 +78,9 @@ class MyDrive:
                     body=file_metadata, media_body=file_to_upload, fields="id"
                 ).execute()
 
-                print(f"------ File: {file_name} was backed up successfully!")
+                logging.info(f"------ File: {file_name} was backed up successfully!")
         except Exception as e:
-            print(f"Error uploading the file '{file_name}': {e}")
+            logging.error(f"Error uploading the file '{file_name}': {e}")
 
     def find_or_create_backup_folder(self):
         # Define the folder name you're looking for
@@ -112,7 +113,7 @@ class MyDrive:
                 parent_folder_id = parent_folder.get("id")
                 return parent_folder_id
             except Exception as e:
-                print(f"Error creating the main backup folder: {e}")
+                logging.error(f"Error creating the main backup folder: {e}")
                 return None
         else:
             # If the folder exists, return its ID
@@ -140,7 +141,7 @@ class MyDrive:
                     # If the folder is empty, skip creating it and print a message
                     folder_files = os.listdir(folder_path)
                     if not folder_files:
-                        print(f"Folder {folder_name} is empty. Skipping...")
+                        logging.warning(f"Folder {folder_name} is empty. Skipping...")
                     else:
                         # If there are files inside the folder, create it
                         folder_id = self.create_folder(folder_name, backup_folder_id)
@@ -155,7 +156,7 @@ class MyDrive:
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python3 backup.py <path_to_directory>")
+        logging.info("Usage: python3 backup.py <path_to_directory>")
         return
 
     path = sys.argv[1]
@@ -166,25 +167,31 @@ def main():
 
     # Check if the specified directory exists
     if not os.path.exists(expanded_path):
-        print(f"Error: Directory '{expanded_path}' does not exist.")
+        logging.error(f"Error: Directory '{expanded_path}' does not exist.")
         return
+    
+    # Configure logging
+    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backup.log")
+    # Create a formatter that includes a timestamp
+    log_format = '%(asctime)s - %(levelname)s: %(message)s'
+    logging.basicConfig(filename=log_file, level=logging.INFO, format=log_format)
 
     my_drive = MyDrive()
-    print("___Backup cron is started___\n")
+    logging.info("___Backup cron is started___\n")
 
     try:
         backups_made = my_drive.upload_folders(expanded_path)
 
         if backups_made == 0:
-            print("No new backups made today\n")
+            logging.info("No new backups made today\n")
         else:
-            print(f"\nTotal new backups made today: {backups_made}\n")
+            logging.info(f"Total new backups made today: {backups_made}\n")
 
-        print("___Backup is completed!___")
+        logging.info("___Backup is completed!___\n\n")
 
     except Exception as e:
-        print(f"Error: {e}")
-        print("___Backup terminated due to an error___")
+        logging.error(f"Error: {e}")
+        logging.info("___Backup terminated due to an error___")
 
 
 if __name__ == "__main__":
